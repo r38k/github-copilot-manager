@@ -16,7 +16,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^24.3.0",
-    "@typescript/native-preview": "7.0.0-dev.20250827.1",
+    "@typescript/native-preview": "7.0.0-dev.20250829.3",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
