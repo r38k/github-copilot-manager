@@ -1,0 +1,124 @@
+{
+  "records": [
+    {
+      "username": "tanaka.taro",
+      "userId": "USR001",
+      "startDate": "2024-01-15",
+      "endDate": null
+    },
+    {
+      "username": "yamada.hanako",
+      "userId": "USR002",
+      "startDate": "2024-02-01",
+      "endDate": null
+    },
+    {
+      "username": "sato.ichiro",
+      "userId": "USR003",
+      "startDate": "2024-03-10",
+      "endDate": null
+    },
+    {
+      "username": "suzuki.jiro",
+      "userId": "USR004",
+      "startDate": "2024-01-20",
+      "endDate": null
+    },
+    {
+      "username": "ito.saburo",
+      "userId": "USR005",
+      "startDate": "2024-04-05",
+      "endDate": null
+    },
+    {
+      "username": "watanabe.yuki",
+      "userId": "USR006",
+      "startDate": "2024-02-15",
+      "endDate": null
+    },
+    {
+      "username": "takahashi.mei",
+      "userId": "USR007",
+      "startDate": "2024-05-01",
+      "endDate": null
+    },
+    {
+      "username": "kobayashi.ken",
+      "userId": "USR008",
+      "startDate": "2024-03-20",
+      "endDate": "2024-11-30"
+    },
+    {
+      "username": "nakamura.rin",
+      "userId": "USR009",
+      "startDate": "2024-06-01",
+      "endDate": null
+    },
+    {
+      "username": "kimura.yui",
+      "userId": "USR010",
+      "startDate": "2024-04-15",
+      "endDate": null
+    },
+    {
+      "username": "yamamoto.takeshi",
+      "userId": "USR011",
+      "startDate": "2024-07-01",
+      "endDate": null
+    },
+    {
+      "username": "mori.akiko",
+      "userId": "USR012",
+      "startDate": "2024-05-20",
+      "endDate": null
+    },
+    {
+      "username": "yoshida.naoki",
+      "userId": "USR013",
+      "startDate": "2024-08-01",
+      "endDate": null
+    },
+    {
+      "username": "ishida.mari",
+      "userId": "USR014",
+      "startDate": "2024-06-15",
+      "endDate": null
+    },
+    {
+      "username": "okada.hiroshi",
+      "userId": "USR015",
+      "startDate": "2024-09-01",
+      "endDate": null
+    },
+    {
+      "username": "hasegawa.kaori",
+      "userId": "USR016",
+      "startDate": "2024-07-20",
+      "endDate": null
+    },
+    {
+      "username": "fujita.daisuke",
+      "userId": "USR017",
+      "startDate": "2024-10-01",
+      "endDate": null
+    },
+    {
+      "username": "saito.yuka",
+      "userId": "USR018",
+      "startDate": "2024-08-15",
+      "endDate": "2024-10-31"
+    },
+    {
+      "username": "kato.masaru",
+      "userId": "USR019",
+      "startDate": "2024-11-01",
+      "endDate": null
+    },
+    {
+      "username": "shimizu.emi",
+      "userId": "USR020",
+      "startDate": "2024-09-20",
+      "endDate": null
+    }
+  ]
+}

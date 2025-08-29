@@ -1,0 +1,16 @@
+{
+  "seat_breakdown": {
+    "total": 25,
+    "added_this_cycle": 3,
+    "pending_invitation": 2,
+    "pending_cancellation": 1,
+    "active_this_cycle": 17,
+    "inactive_this_cycle": 3
+  },
+  "seat_management_setting": "assign_selected",
+  "public_code_suggestions": "allow",
+  "copilot_chat": "enabled",
+  "ide_chat": "enabled",
+  "cli": "enabled",
+  "seat_cancellation_date": null
+}

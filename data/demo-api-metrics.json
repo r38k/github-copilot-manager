@@ -1,0 +1,175 @@
+{
+  "total_active_users": 20,
+  "total_engaged_users": 17,
+  "copilot_ide_code_completions": {
+    "total_engaged_users": 17,
+    "languages": [
+      {
+        "name": "typescript",
+        "total_engaged_users": 15
+      },
+      {
+        "name": "javascript",
+        "total_engaged_users": 12
+      },
+      {
+        "name": "python",
+        "total_engaged_users": 8
+      },
+      {
+        "name": "java",
+        "total_engaged_users": 5
+      },
+      {
+        "name": "go",
+        "total_engaged_users": 3
+      }
+    ],
+    "editors": [
+      {
+        "name": "vscode",
+        "total_engaged_users": 15,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "custom_model_training_date": null,
+            "total_engaged_users": 12,
+            "total_code_suggestions": 4523,
+            "total_code_acceptances": 1356,
+            "total_code_lines_suggested": 12450,
+            "total_code_lines_accepted": 3890
+          },
+          {
+            "name": "gpt-3.5-turbo",
+            "is_custom_model": false,
+            "custom_model_training_date": null,
+            "total_engaged_users": 8,
+            "total_code_suggestions": 2145,
+            "total_code_acceptances": 623,
+            "total_code_lines_suggested": 5234,
+            "total_code_lines_accepted": 1456
+          }
+        ]
+      },
+      {
+        "name": "jetbrains",
+        "total_engaged_users": 5,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "custom_model_training_date": null,
+            "total_engaged_users": 5,
+            "total_code_suggestions": 890,
+            "total_code_acceptances": 234,
+            "total_code_lines_suggested": 2345,
+            "total_code_lines_accepted": 678
+          }
+        ]
+      },
+      {
+        "name": "vim",
+        "total_engaged_users": 2,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "custom_model_training_date": null,
+            "total_engaged_users": 2,
+            "total_code_suggestions": 234,
+            "total_code_acceptances": 89,
+            "total_code_lines_suggested": 567,
+            "total_code_lines_accepted": 234
+          }
+        ]
+      }
+    ]
+  },
+  "copilot_ide_chat": {
+    "total_engaged_users": 14,
+    "editors": [
+      {
+        "name": "vscode",
+        "total_engaged_users": 12,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "total_engaged_users": 12,
+            "total_chats": 456,
+            "total_chat_insertion_events": 123,
+            "total_chat_copy_events": 89
+          }
+        ]
+      },
+      {
+        "name": "jetbrains",
+        "total_engaged_users": 3,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "total_engaged_users": 3,
+            "total_chats": 78,
+            "total_chat_insertion_events": 23,
+            "total_chat_copy_events": 15
+          }
+        ]
+      }
+    ]
+  },
+  "copilot_dotcom_chat": {
+    "total_engaged_users": 8,
+    "models": [
+      {
+        "name": "gpt-4",
+        "is_custom_model": false,
+        "total_engaged_users": 8,
+        "total_chats": 234
+      }
+    ]
+  },
+  "copilot_dotcom_pull_requests": {
+    "total_engaged_users": 5,
+    "repositories": [
+      {
+        "name": "main-app",
+        "total_engaged_users": 4,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "total_pr_summaries_created": 23
+          }
+        ]
+      },
+      {
+        "name": "backend-api",
+        "total_engaged_users": 3,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "total_pr_summaries_created": 15
+          }
+        ]
+      },
+      {
+        "name": "frontend-ui",
+        "total_engaged_users": 2,
+        "models": [
+          {
+            "name": "gpt-4",
+            "is_custom_model": false,
+            "total_pr_summaries_created": 8
+          }
+        ]
+      }
+    ]
+  },
+  "total_lines_suggested": 20596,
+  "total_lines_accepted": 6258,
+  "total_active_editors": 3,
+  "day": "2024-12-10"
+}
