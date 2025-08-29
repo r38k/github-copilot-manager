@@ -1,7 +1,7 @@
 # ADR-0003: GitHub APIとCSVのデュアルデータソース戦略
 
 ## ステータス
-提案中
+承認済み
 
 ## コンテキスト
 GitHub Copilot Managerは2つの異なるデータソースを扱う必要がある：
@@ -71,6 +71,41 @@ GitHub Copilot Managerは2つの異なるデータソースを扱う必要があ
 
 ## 実装詳細
 
+### CSVアップロードの取り扱い（サーバー側での記録と最新選択）
+
+- サーバーはアップロードされたCSVをストレージ（ファイルまたはDB）に保存し、以下のメタデータを必ず記録する：
+  - `id`（一意）、`filename`、`size`、`contentHash`、`uploadedAt`、`uploadedBy`（任意）
+- データ取得時は「アップロード日時 `uploadedAt` が最新の1件」を既定で選択する。
+- UI上は「CSV最終アップロード日: YYYY-MM-DD HH:mm」を明記し、古い場合は注意を促す（バッジ/警告テキスト）。
+- CSVが存在しない場合はAPIデータのみで表示し、詳細分析は無効（アップロード促しを表示）。
+
+```typescript
+// サーバー内のCSVレジストリ
+interface CsvUploadRecord {
+  id: string;
+  filename: string;
+  size: number;
+  contentHash: string; // 重複判定・追跡
+  uploadedAt: Date;
+  uploadedBy?: string;
+}
+
+interface CsvRegistry {
+  list(): Promise<CsvUploadRecord[]>;
+  latest(): Promise<CsvUploadRecord | undefined>;
+  saveUpload(file: Buffer, meta: Omit<CsvUploadRecord, 'id' | 'contentHash' | 'size'>): Promise<CsvUploadRecord>;
+  loadContent(id: string): Promise<Buffer>;
+}
+
+// 統合時は常に最新CSVを解決して使用
+async function getLatestCsvRecords(registry: CsvRegistry): Promise<CSVRecord[] | undefined> {
+  const latest = await registry.latest();
+  if (!latest) return undefined;
+  const buf = await registry.loadContent(latest.id);
+  return parseCsv(buf); // 型安全なCSVパーサを想定
+}
+```
+
 ### データモデル
 
 ```typescript
@@ -106,40 +141,38 @@ interface IntegratedUserData {
 ### データ統合戦略
 
 ```typescript
-class DataIntegrationService {
-  // APIデータとCSVデータのマージ
-  mergeUserData(apiData: APIUser[], csvData?: CSVRecord[]): IntegratedUserData[] {
-    const merged = apiData.map(apiUser => {
-      const csvRecord = csvData?.find(csv => 
-        csv.username === apiUser.username
-      );
-      
-      return {
-        basic: extractBasicInfo(apiUser),
-        detailed: csvRecord ? extractDetailedInfo(csvRecord) : undefined,
-        meta: {
-          source: csvRecord ? 'merged' : 'api',
-          apiLastFetched: new Date(),
-          csvLastImported: csvRecord?.importedAt,
-          dataQuality: this.assessDataQuality(apiUser, csvRecord)
-        }
-      };
-    });
-    
-    return merged;
-  }
-  
-  // データ品質の評価
-  assessDataQuality(api: APIUser, csv?: CSVRecord): DataQuality {
-    if (!csv) return 'partial';
-    
-    const csvAge = Date.now() - csv.importedAt.getTime();
-    const ONE_DAY = 24 * 60 * 60 * 1000;
-    
-    if (csvAge > 7 * ONE_DAY) return 'stale';
-    if (csvAge > ONE_DAY) return 'partial';
-    return 'complete';
-  }
+// APIデータとCSVデータのマージ（関数ベース）
+function mergeUserData(
+  apiData: APIUser[],
+  csvData?: CSVRecord[],
+  latestCsvUploadedAt?: Date
+): IntegratedUserData[] {
+  return apiData.map(apiUser => {
+    const csvRecord = csvData?.find(csv => csv.username === apiUser.username);
+
+    return {
+      basic: extractBasicInfo(apiUser),
+      detailed: csvRecord ? extractDetailedInfo(csvRecord) : undefined,
+      meta: {
+        source: csvRecord ? 'merged' : 'api',
+        apiLastFetched: new Date(),
+        csvLastImported: latestCsvUploadedAt ?? csvRecord?.importedAt,
+        dataQuality: assessDataQuality(apiUser, csvRecord)
+      }
+    };
+  });
+}
+
+// データ品質の評価（関数ベース）
+function assessDataQuality(api: APIUser, csv?: CSVRecord): DataQuality {
+  if (!csv) return 'partial';
+
+  const csvAge = Date.now() - csv.importedAt.getTime();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  if (csvAge > 7 * ONE_DAY) return 'stale';
+  if (csvAge > ONE_DAY) return 'partial';
+  return 'complete';
 }
 ```
 
@@ -162,6 +195,13 @@ const UserMetrics: FC<{ user: IntegratedUserData }> = ({ user }) => {
       
       {/* データ品質インジケーター */}
       <DataQualityBadge quality={user.meta.dataQuality} />
+
+      {/* CSV最終アップロード日と注意喚起 */}
+      <FooterNote>
+        {user.meta.csvLastImported
+          ? `CSV最終アップロード日: ${formatDate(user.meta.csvLastImported)}${user.meta.dataQuality !== 'complete' ? '（古い可能性があります）' : ''}`
+          : 'CSVが未アップロードです'}
+      </FooterNote>
     </Card>
   );
 };
@@ -176,8 +216,8 @@ interface CacheStrategy {
     storage: 'memory'
   },
   csv: {
-    ttl: 7 * 24 * 60 * 60 * 1000,  // 7日
-    storage: 'localStorage'
+    ttl: 7 * 24 * 60 * 60 * 1000,  // 7日（サーバー側での再パース抑制）
+    storage: 'server'              // サーバー側の永続ストレージ + メタデータレジストリ
   },
   merged: {
     ttl: 60 * 1000,  // 1分
@@ -189,9 +229,9 @@ interface CacheStrategy {
 ## 移行計画
 
 1. **Phase 1**: API統合の実装
-2. **Phase 2**: CSVインポート機能の追加
+2. **Phase 2**: CSVインポート機能の追加（アップロードメタデータのレジストリ実装、最新選択ロジック）
 3. **Phase 3**: データマージロジックの実装
-4. **Phase 4**: UI改善（データ品質表示）
+4. **Phase 4**: UI改善（データ品質表示＋CSV最終アップロード日の明記と注意喚起）
 
 ## 参考資料
 - [GitHub Copilot Metrics API制限](https://docs.github.com/en/rest/copilot/copilot-metrics)

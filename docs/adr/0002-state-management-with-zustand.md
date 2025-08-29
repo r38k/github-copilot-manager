@@ -1,10 +1,10 @@
 # ADR-0002: 状態管理にZustandを採用
 
 ## ステータス
-提案中
+廃止
 
 ## コンテキスト
-GitHub Copilot Managerは複数のデータソース（GitHub API、CSV）から取得したデータを統合し、複数のコンポーネント間で共有する必要がある。ユーザー情報、使用状況、請求データなどを効率的に管理し、リアクティブに更新を反映する状態管理ソリューションが必要。
+本プロジェクトは ADR-0001 にて「Hono + React による SSR」を前提とし、初期表示データはサーバーで統合・整形して HTML に埋め込み、必要最小限のハイドレーションで表示する方針とした。現時点では、クライアント横断で共有すべきグローバル状態は想定しておらず、各 UI はサーバーから受け取った props とコンポーネント内の局所状態（`useState` 等）で完結可能である。
 
 ## 検討した選択肢
 
@@ -57,119 +57,60 @@ GitHub Copilot Managerは複数のデータソース（GitHub API、CSV）から
   - デバッグが困難
 
 ## 決定
-**選択肢2: Zustandを採用する**
+本ADRの提案は廃止し、現状は「グローバルなクライアント状態管理ライブラリを採用しない」。
 
 ## 理由
-1. **シンプルさ**: 学習コストが低く、チーム全体がすぐに使える
-2. **パフォーマンス**: 小さなバンドルサイズと効率的な再レンダリング制御
-3. **TypeScript**: 型推論が優秀で、型安全な状態管理が可能
-4. **柔軟性**: ミドルウェアパターンで拡張可能
-5. **SSR対応**: サーバーサイドレンダリングとの統合が容易
+1. **SSR前提で十分**: 初期データはサーバーで統合し、画面遷移や再計算もサーバーラウンドトリップで成立する。
+2. **複雑性の削減**: グローバルストアを導入せず、コンポーネントローカルな状態で十分に表現できる。
+3. **バンドル最小化**: クライアント依存を増やさず、必要最小限のハイドレーションに留める。
+4. **データの単一源泉**: 真のソースはサーバー側（GitHub API + CSVの統合結果）に置き、クライアントは表示責務に集中。
 
 ## 影響
 
 ### ポジティブ
-- 開発速度が向上（ボイラープレート削減）
-- アプリケーションのバンドルサイズを小さく保てる
-- 状態のスライス化により、必要な部分だけを購読できる
-- React外（バックグラウンドタスクなど）からも状態を更新できる
+- グローバル状態層がなくなり実装が単純化。
+- クライアントバンドルと依存関係が最小化。
+- サーバー中心の一貫したデータモデルを維持。
 
-### ネガティブ
-- Redux DevToolsの一部機能が使えない
-- タイムトラベルデバッギングがネイティブサポートされていない
-- 大規模チームでの統一的なパターン確立が必要
+### ネガティブ / トレードオフ
+- クライアントのみでの複雑な双方向インタラクションは設計上抑制。
+- 完全リアルタイム同期が必要になった場合は別途検討（SSE/WebSocket など）。
 
-## 実装詳細
+## 実装メモ（現方針）
 
 ```typescript
-// ストア定義
-interface CopilotStore {
-  // 状態
-  users: Record<UserId, User>;
+// SSRで整形したデータを埋め込み、コンポーネントは props で受け取る
+type DashboardProps = {
+  users: User[];
   usage: UsageData[];
   billing: BillingData[];
-  
-  // 読み込み状態
-  isLoading: boolean;
-  error: Error | null;
-  
-  // アクション
-  fetchUsers: () => Promise<void>;
-  updateUser: (userId: UserId, data: Partial<User>) => void;
-  importCSV: (file: File) => Promise<void>;
-  
-  // セレクター
-  getActiveUsers: () => User[];
-  getCurrentMonthCost: () => number;
+};
+
+export function Dashboard({ users, usage, billing }: DashboardProps) {
+  // UI上の一時的な状態はローカルに保持
+  const [filter, setFilter] = useState<string>("");
+  const filtered = useMemo(
+    () => users.filter(u => u.name.includes(filter)),
+    [users, filter]
+  );
+  return (
+    <>
+      <input value={filter} onChange={e => setFilter(e.target.value)} />
+      <UserList users={filtered} />
+    </>
+  );
 }
 
-// ストア実装
-const useStore = create<CopilotStore>((set, get) => ({
-  users: {},
-  usage: [],
-  billing: [],
-  isLoading: false,
-  error: null,
-  
-  fetchUsers: async () => {
-    set({ isLoading: true });
-    try {
-      const data = await api.getUsers();
-      set({ users: data, isLoading: false });
-    } catch (error) {
-      set({ error, isLoading: false });
-    }
-  },
-  
-  getActiveUsers: () => {
-    return Object.values(get().users)
-      .filter(user => user.isActive);
-  }
-}));
-
-// コンポーネントでの使用
-const Dashboard = () => {
-  const users = useStore(state => state.users);
-  const fetchUsers = useStore(state => state.fetchUsers);
-  
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-  
-  return <UserList users={users} />;
-};
+// 追加のデータ取得や変更は、フォーム送信やリンク遷移でサーバーへ委譲
 ```
 
-## ミドルウェアパターン
+## 将来の見直し条件
 
-```typescript
-// 永続化ミドルウェア
-const useStore = create(
-  persist(
-    (set, get) => ({
-      // ストア実装
-    }),
-    {
-      name: 'copilot-store',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ 
-        users: state.users 
-      })
-    }
-  )
-);
-
-// ロギングミドルウェア
-const useStore = create(
-  devtools(
-    (set, get) => ({
-      // ストア実装
-    }),
-    { name: 'CopilotStore' }
-  )
-);
-```
+以下の条件が満たされた場合、クライアント状態管理の導入を再検討する：
+- グラフ・テーブル間での複雑な双方向連携が必要になった。
+- ページ横断で共有すべきユーザー操作状態が増えた。
+- オフラインやローカル永続化要件が明確になった。
+- リアルタイム更新（SSE/WebSocket）が普及し、クライアント側で集約が必要。
 
 ## 参考資料
-- [Zustand公式ドキュメント](https://github.com/pmndrs/zustand)
-- [状態管理ライブラリ比較](https://npm-compare.com/zustand,redux,jotai,valtio)
+- [SSRのベストプラクティス（React）](https://react.dev/reference/react-dom/server)
