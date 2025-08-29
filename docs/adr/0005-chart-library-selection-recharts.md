@@ -1,7 +1,7 @@
 # ADR-0005: グラフライブラリとしてRechartsを採用
 
 ## ステータス
-提案中
+承認済み
 
 ## コンテキスト
 GitHub Copilot Managerでは、利用者数の推移グラフが中核機能の一つとなる。以下の要件を満たすグラフライブラリが必要：
@@ -269,6 +269,61 @@ const chartTheme = {
   }
 };
 ```
+
+## デザイン/Tailwind併用方針
+
+本ADRで選定した Recharts は SVG/コンポーネント指向のAPIであり、ユーティリティCSSの Tailwind と併用可能。役割分担と実装パターンは以下の通り。
+
+- 役割分担:
+  - Tailwind: レイアウト/余白/タイポグラフィ/コンテナ装飾/テーマ変数の定義
+  - Recharts: グラフ自体の描画（`stroke`/`fill`/`grid` などは props で制御）
+
+- 推奨パターン（CSS変数経由）:
+  - Tailwind でコンテナに色のCSS変数を与え、Recharts はその変数を参照。
+  - ダークモードやテーマ切替は、親要素へ変数上書きクラスを付与して一括反映。
+
+```tsx
+// 使用例: Tailwind + Recharts（色はCSS変数で一元管理）
+export const UsageChartCard = ({ data }: { data: ChartDataPoint[] }) => (
+  <section
+    className=
+      "p-4 rounded-md bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 " +
+      // テーマ変数（任意色は Tailwind の arbitrary properties を利用）
+      "[--chart-primary:#2563eb] [--chart-secondary:#16a34a] [--chart-grid:#e5e7eb] " +
+      "dark:[--chart-primary:#60a5fa] dark:[--chart-secondary:#34d399] dark:[--chart-grid:#374151]"
+  >
+    <h3 className="mb-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">利用者推移</h3>
+    <div className="h-[320px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
+          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="activeUsers" stroke="var(--chart-primary)" dot={false} />
+          <Line type="monotone" dataKey="engagedUsers" stroke="var(--chart-secondary)" dot={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </section>
+);
+```
+
+- 注意点:
+  - Recharts内部のSVG要素は Tailwind のユーティリティで直接スタイルしづらい（`className` が内部要素に伝播しないケースがある）。色/線幅等は Recharts コンポーネントの props（`stroke`/`fill`/`strokeWidth` 等）で指定するか、上記のように CSS 変数参照を用いる。
+  - レジェンド/ツールチップ等、ラッパーはHTML要素なので Tailwind クラスで自由に装飾可能。カスタムツールチップは通常の React コンポーネントとして Tailwind を適用。
+  - 大規模データ時のパフォーマンスは Tailwind とは独立の関心（サンプリング/仮想化で対処）。
+
+### Tailwind 導入の最小手順（要約）
+1. 依存導入: `pnpm add -D tailwindcss postcss autoprefixer`
+2. 初期化: `npx tailwindcss init -p`（`tailwind.config.ts`/`postcss.config.cjs`）
+3. 対象設定: `content` に SSR/CSR のテンプレート（`src/**/*.{ts,tsx}` など）を指定
+4. エントリCSS: `src/ui/styles.css` を作成し `@tailwind base; @tailwind components; @tailwind utilities;` を記述
+5. レイアウト/エントリで CSS を読み込み（SSR ではビルド済み CSS を `<link>` で提供）
+6. ダークモード: Tailwind の `class` 戦略を採用し、`<html class="dark">` またはルートに `dark:` 系クラスを適用
+
+補足: SSR（ADR-0001）と併用可。ビルドは Vite/RSBuild/Rspack 等の任意ツールで問題なく運用できる。JIT のクラスパージのため、任意生成クラスを使う場合は `safelist` の検討を推奨。
 
 ## 移行計画
 1. **Phase 1**: 基本的なライングラフの実装

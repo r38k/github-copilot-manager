@@ -1,7 +1,7 @@
 # ADR-0004: 請求サイクル計算の単純化アプローチ
 
 ## ステータス
-提案中
+承認済み
 
 ## コンテキスト
 GitHub Copilotの請求は複雑な仕組みを持つ：
@@ -90,39 +90,40 @@ interface SimplifiedBillingCalculation {
   ];
 }
 
-class SimplifiedBillingCalculator {
-  calculateMonthlyCost(users: User[], cycleStart: Date, cycleEnd: Date): BillingEstimate {
-    // アクティブユーザーをカウント
-    const activeUsers = users.filter(user => 
-      this.isActiveInCycle(user, cycleStart, cycleEnd)
-    );
-    
-    // 単純計算
-    const baseCost = activeUsers.length * COPILOT_PRICE_PER_MONTH;
-    
-    return {
-      activeUserCount: activeUsers.length,
-      estimatedCost: baseCost,
-      confidence: "medium", // 誤差15%程度
-      calculationMethod: "simplified",
-      users: activeUsers.map(u => u.username),
-      disclaimers: [
-        "概算値です。実際の請求額と差異が生じる可能性があります",
-        "日割り計算は含まれていません",
-        "月途中の加入・脱退による調整は反映されていません"
-      ]
-    };
-  }
-  
-  private isActiveInCycle(user: User, start: Date, end: Date): boolean {
-    const assignedAt = new Date(user.copilotSeat.assignedAt);
-    const cancelledAt = user.copilotSeat.pendingCancellationDate 
-      ? new Date(user.copilotSeat.pendingCancellationDate)
-      : null;
-    
-    // シンプルな重複判定
-    return assignedAt <= end && (!cancelledAt || cancelledAt >= start);
-  }
+// 簡易請求推定（関数ベース）
+function calculateMonthlyCost(
+  users: User[],
+  cycleStart: Date,
+  cycleEnd: Date
+): BillingEstimate {
+  // アクティブユーザーをカウント
+  const activeUsers = users.filter(user => isActiveInCycle(user, cycleStart, cycleEnd));
+
+  // 単純計算
+  const baseCost = activeUsers.length * COPILOT_PRICE_PER_MONTH;
+
+  return {
+    activeUserCount: activeUsers.length,
+    estimatedCost: baseCost,
+    confidence: "medium", // 誤差15%程度
+    calculationMethod: "simplified",
+    users: activeUsers.map(u => u.username),
+    disclaimers: [
+      "概算値です。実際の請求額と差異が生じる可能性があります",
+      "日割り計算は含まれていません",
+      "月途中の加入・脱退による調整は反映されていません"
+    ]
+  };
+}
+
+function isActiveInCycle(user: User, start: Date, end: Date): boolean {
+  const assignedAt = new Date(user.copilotSeat.assignedAt);
+  const cancelledAt = user.copilotSeat.pendingCancellationDate
+    ? new Date(user.copilotSeat.pendingCancellationDate)
+    : null;
+
+  // シンプルな重複判定
+  return assignedAt <= end && (!cancelledAt || cancelledAt >= start);
 }
 ```
 

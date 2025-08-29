@@ -6,11 +6,12 @@
 
 | No. | タイトル | ステータス | 日付 |
 |-----|----------|------------|------|
-| [0001](./0001-use-ssr-with-hono-and-react.md) | SSRアーキテクチャとしてHono + Reactを採用 | 提案中 | 2024-08-27 |
-| [0002](./0002-state-management-with-zustand.md) | 状態管理にZustandを採用 | 提案中 | 2024-08-27 |
-| [0003](./0003-dual-data-source-strategy.md) | GitHub APIとCSVのデュアルデータソース戦略 | 提案中 | 2024-08-27 |
-| [0004](./0004-billing-cycle-calculation-approach.md) | 請求サイクル計算の単純化アプローチ | 提案中 | 2024-08-27 |
-| [0005](./0005-chart-library-selection-recharts.md) | グラフライブラリとしてRechartsを採用 | 提案中 | 2024-08-27 |
+| [0001](./0001-use-ssr-with-hono-and-react.md) | SSRアーキテクチャとしてHono + Reactを採用 | 承認済み | 2024-08-27 |
+| [0002](./0002-state-management-with-zustand.md) | 状態管理にZustandを採用 | 廃止 | 2024-08-27 |
+| [0003](./0003-dual-data-source-strategy.md) | GitHub APIとCSVのデュアルデータソース戦略 | 承認済み | 2024-08-27 |
+| [0004](./0004-billing-cycle-calculation-approach.md) | 請求サイクル計算の単純化アプローチ | 承認済み | 2024-08-27 |
+| [0005](./0005-chart-library-selection-recharts.md) | グラフライブラリとしてRechartsを採用 | 承認済み | 2024-08-27 |
+| [0006](./0006-ssr-first-state-approach.md) | SSRファーストの状態管理方針 | 提案中 | 2024-08-29 |
 
 ## ADRフォーマット
 
@@ -44,9 +45,7 @@
 ┌─────────────────────────────────────────┐
 │           Hono Server (SSR)             │
 ├─────────────────────────────────────────┤
-│          Zustand Store                  │
-├─────────────────────────────────────────┤
-│         React Components                │
+│      React Components (islands)         │
 │  ┌─────────┬─────────┬─────────────────┐ │
 │  │Dashboard│ Charts  │ Billing Table   │ │
 │  │  (Card) │(Recharts│  (Expandable)   │ │
