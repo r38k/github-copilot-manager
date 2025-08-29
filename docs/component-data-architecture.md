@@ -299,6 +299,8 @@ const UserDetailView: FC<UserDetailViewProps> = ({ userId, dateRange }) => {
 
 ## データストア設計（Zustand）
 
+注意: このセクションは旧案です。ADR-0002 により Zustand 採用は廃止となりました。現行方針は SSR ファーストでグローバルクライアント状態を極力導入しない方向です（ADR-0006: 提案中）。以下の内容は参考実装として残しています。
+
 ```typescript
 interface AppStore {
   // 状態

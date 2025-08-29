@@ -6,10 +6,10 @@ GitHub Copilot Managerは、組織のGitHub Copilot利用状況を可視化し�
 ## 技術スタック
 
 ### フロントエンド
-- **フレームワーク**: React + Vite
-- **UIライブラリ**: 検討中（Tailwind CSS / Material-UI）
-- **チャート**: Recharts / Chart.js
-- **状態管理**: Zustand / Context API
+- **フレームワーク**: React + Vite（開発/ビルド）、SSRは Hono + React（ADR-0001）
+- **UIライブラリ**: Tailwind CSS（ベース。必要に応じて軽量に MUI 併用可）
+- **チャート**: Recharts（ADR-0005）
+- **状態管理**: なし（SSRファースト、ローカル状態中心。Zustand は廃止: ADR-0002）
 
 ### バックエンド
 - **フレームワーク**: Hono
