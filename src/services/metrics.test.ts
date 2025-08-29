@@ -11,8 +11,8 @@ const loadDemo = () => {
   return parsed.value;
 };
 
-describe("metrics", () => {
-  it("aggregates total useQuota by user", () => {
+describe("メトリクス集計", () => {
+  it("ユーザー別にuseQuotaを合算できる", () => {
     const records = loadDemo();
     const totals = sumUsageByUser(records);
     // simple spot checks against known demo values
@@ -25,7 +25,7 @@ describe("metrics", () => {
     expect(totals.size).toBeGreaterThan(5);
   });
 
-  it("finds users exceeding monthly quota", () => {
+  it("月次制限を超過したユーザーを検出できる", () => {
     const records = loadDemo();
     const exceeding = usersExceedingMonthlyQuota(records);
     // from demo data, at least these two appear exceeding once
@@ -33,4 +33,3 @@ describe("metrics", () => {
     expect(exceeding.has("sato.ichiro")).toBe(true);
   });
 });
-

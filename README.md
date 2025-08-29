@@ -19,13 +19,15 @@ GitHub Copilot組織ライセンス管理ツール
 ### 1. GitHub GUI CSVエクスポート
 組織の管理画面からダウンロード可能なCSVファイル
 
-**フォーマット:**
+**フォーマット（正規化キー）:**
 - `timestamp`: 記録日時
-- `user`: ユーザー名
-- `model`: 使用モデル（gpt-4, gpt-3.5-turbo等）
-- `useQuota`: 使用量
-- `limitMonthlyQuota`: 月次制限
-- `exceedsMonthlyQuota`: 制限超過フラグ
+- `user`: ユーザー名（login/username などを正規化）
+- `model`: 使用モデル（gpt-4, gpt-3.5-turbo 等）
+- `useQuota`: 使用量（usage/used/credits_used 等を正規化）
+- `limitMonthlyQuota`: 月次制限（monthly_quota/monthly_limit 等を正規化）
+- `exceedsMonthlyQuota`: 制限超過フラグ（exceeded/is_exceeded 等を正規化）
+
+注: 実CSVの列名はエクスポート元により異なる場合があります。本リポジトリでは `src/parsers/usage-headers.ts` の別名マップで柔軟に対応しています。必要に応じてこのマップを編集してください。
 
 ### 2. 利用申請記録
 内部管理用の利用者記録

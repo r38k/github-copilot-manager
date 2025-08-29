@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { isOk } from "../utils/result.js";
 import { parseUsageCsv } from "./usage-csv.js";
 
-describe("parseUsageCsv", () => {
-  it("parses demo CSV into records", () => {
+describe("usage CSV のパース", () => {
+  it("デモCSVをレコードに変換できる", () => {
     const csv = readFileSync("data/demo-usage.csv", "utf8");
     const res = parseUsageCsv(csv);
     expect(isOk(res)).toBe(true);
@@ -18,10 +18,9 @@ describe("parseUsageCsv", () => {
     });
   });
 
-  it("fails on malformed header", () => {
-    const bad = "time,user\n2024-01-01,alice";
+  it("ヘッダ不正ならエラーになる", () => {
+    const bad = "x,y\n2024-01-01,alice";
     const res = parseUsageCsv(bad);
     expect(res.ok).toBe(false);
   });
 });
-

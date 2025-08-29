@@ -1,5 +1,6 @@
 import type { Result } from "../utils/result.js";
 import { err, ok } from "../utils/result.js";
+import { HEADER_ALIASES, REQUIRED_HEADERS, type UsageHeader } from "./usage-headers.js";
 
 export type UsageRecord = {
   timestamp: string; // ISO string
@@ -20,33 +21,39 @@ export const parseUsageCsv = (text: string): Result<ReadonlyArray<UsageRecord>, 
 
   const first = lines[0];
   if (first === undefined) return err({ kind: "InvalidFormat", message: "Empty CSV" });
-  const header = first.split(",").map((h) => h.trim());
-  const expected = [
-    "timestamp",
-    "user",
-    "model",
-    "useQuota",
-    "limitMonthlyQuota",
-    "exceedsMonthlyQuota",
-  ];
-  const headerMatches = expected.every((h, i) => header[i] === h);
-  if (!headerMatches)
-    return err({ kind: "InvalidFormat", message: "Unexpected CSV header" });
+  const rawHeaders = first.split(",").map((h) => h.trim());
+  // 別名解決して、正規化キー → インデックスのマップを作る
+  const indexByKey = new Map<UsageHeader, number>();
+  for (let i = 0; i < rawHeaders.length; i++) {
+    const key = HEADER_ALIASES[rawHeaders[i]!.toLowerCase()];
+    if (key) indexByKey.set(key, i);
+  }
+  const missing = REQUIRED_HEADERS.filter((k) => !indexByKey.has(k));
+  if (missing.length > 0) {
+    return err({
+      kind: "InvalidFormat",
+      message: `Missing required columns: ${missing.join(", ")}`,
+    });
+  }
 
   const records: UsageRecord[] = [];
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i] ?? "";
     if (!line.trim()) continue;
     const parts = line.split(",");
-    if (parts.length !== expected.length)
-      return err({ kind: "InvalidFormat", message: "Wrong column count", line: i + 1 });
+    const tsIdx = indexByKey.get("timestamp")!;
+    const userIdx = indexByKey.get("user")!;
+    const modelIdx = indexByKey.get("model")!;
+    const usageIdx = indexByKey.get("useQuota")!;
+    const limitIdx = indexByKey.get("limitMonthlyQuota")!;
+    const exceededIdx = indexByKey.get("exceedsMonthlyQuota")!;
 
-    const timestamp = parts[0]!.trim();
-    const user = parts[1]!.trim();
-    const model = parts[2]!.trim();
-    const useQuotaStr = parts[3]!.trim();
-    const limitMonthlyQuotaStr = parts[4]!.trim();
-    const exceedsStr = parts[5]!.trim();
+    const timestamp = (parts[tsIdx] ?? "").trim();
+    const user = (parts[userIdx] ?? "").trim();
+    const model = (parts[modelIdx] ?? "").trim();
+    const useQuotaStr = (parts[usageIdx] ?? "").trim();
+    const limitMonthlyQuotaStr = (parts[limitIdx] ?? "").trim();
+    const exceedsStr = (parts[exceededIdx] ?? "").trim();
 
     const useQuota = Number(useQuotaStr);
     const limitMonthlyQuota = Number(limitMonthlyQuotaStr);
