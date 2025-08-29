@@ -81,7 +81,7 @@ GITHUB_ORG=your_organization_name
 npx tsx src/index.ts
 
 # ビルドと実行
-npx tsgo
+pnpm build
 node dist/index.js
 ```
 
