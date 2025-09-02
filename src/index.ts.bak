@@ -1,0 +1,478 @@
+import { Hono } from 'hono';
+import { serve } from '@hono/node-server';
+import type { Result } from './utils/result.js';
+import { fileSystemCsvRegistry } from './services/csv-registry.js';
+import { createAutoDataIntegrationService } from './services/data-integration.js';
+import type { IntegratedData } from './services/data-integration.js';
+import { sumUsageByUser, usersExceedingMonthlyQuota } from './services/metrics.js';
+import { createFileSystemUploadService } from './services/csv-upload.js';
+import { renderToString } from 'react-dom/server';
+import { Dashboard } from './components/dashboard.tsx';
+
+// データサービスのインターフェース
+export interface DataService {
+  getIntegratedData(): Promise<Result<IntegratedData, { kind: string; message: string }>>;
+}
+
+// データサービスの実装
+const createDataService = (): DataService => {
+  const csvRegistry = fileSystemCsvRegistry('data');
+  const csvUploadService = createFileSystemUploadService('uploads');
+  
+  const csvService = {
+    async getLatest() {
+      // まずアップロードされたCSVをチェック
+      const uploadedResult = await csvUploadService.list();
+      if (uploadedResult.ok && uploadedResult.value.length > 0) {
+        const latest = uploadedResult.value[0];
+        return { ok: true, value: {
+          id: latest.id,
+          filename: latest.filename,
+          size: latest.size,
+          contentHash: latest.contentHash,
+          uploadedAt: latest.uploadedAt,
+        }} as const;
+      }
+      
+      // アップロードされたCSVがない場合はdataディレクトリから取得
+      const result = csvRegistry.latest();
+      return result.ok 
+        ? { ok: true, value: result.value || null } as const
+        : { ok: false, error: { kind: result.error.kind, message: result.error.message } } as const;
+    },
+    async getContent(id: string) {
+      // まずアップロードされたCSVから試す
+      const uploadedContent = await csvUploadService.getContent(id);
+      if (uploadedContent.ok && uploadedContent.value) {
+        return { ok: true, value: uploadedContent.value } as const;
+      }
+      
+      // アップロードされたCSVになければdataディレクトリから取得
+      const result = csvRegistry.loadContent(id);
+      return result.ok 
+        ? { ok: true, value: result.value } as const
+        : { ok: false, error: { kind: result.error.kind, message: result.error.message } } as const;
+    }
+  };
+
+  const integrationService = createAutoDataIntegrationService(csvService);
+
+  return {
+    async getIntegratedData() {
+      const result = await integrationService.getIntegratedData();
+      if (result.ok) {
+        // CSV データがある場合は統計を追加
+        let enhancedCsvData = result.value.csvData;
+        if (enhancedCsvData) {
+          const totals = sumUsageByUser(enhancedCsvData.records);
+          const exceeding = usersExceedingMonthlyQuota(enhancedCsvData.records);
+          enhancedCsvData = {
+            ...enhancedCsvData,
+            totalUsers: totals.size,
+            exceedingUsers: exceeding.size,
+          } as any;
+        }
+
+        const enhancedData: IntegratedData = {
+          ...result.value,
+          csvData: enhancedCsvData,
+          dataSourceStatus: {
+            ...result.value.dataSourceStatus,
+            apiLastFetched: result.value.dataSourceStatus.seatsLastUpdated,
+          } as any,
+        };
+
+        return { ok: true, value: enhancedData } as const;
+      }
+      return result;
+    }
+  };
+};
+
+// サーバー作成関数
+export const createServer = (dataService: DataService = createDataService()) => {
+  const app = new Hono();
+
+  // ヘルスチェック
+  app.get('/api/health', (c) => {
+    return c.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // 統合データの取得
+  app.get('/api/data', async (c) => {
+    const result = await dataService.getIntegratedData();
+    if (result.ok) {
+      return c.json(result.value);
+    }
+    return c.json({ error: result.error.message }, 500);
+  });
+
+  // CSV操作エンドポイント
+  const csvUploadService = createFileSystemUploadService('uploads');
+
+  app.post('/api/csv/upload', async (c) => {
+    const body = await c.req.parseBody();
+    const file = body.file as File;
+    const uploadedBy = body.uploadedBy as string | undefined;
+
+    if (!file) {
+      return c.json({ error: 'No file provided' }, 400);
+    }
+
+    if (!file.name.endsWith('.csv')) {
+      return c.json({ error: 'Only CSV files are allowed' }, 400);
+    }
+
+    const content = await file.text();
+    const result = await csvUploadService.upload(content, file.name, uploadedBy);
+
+    if (result.ok) {
+      return c.json(result.value);
+    }
+
+    const status = result.error.kind === 'ValidationError' ? 400 : 500;
+    return c.json({ error: result.error.message }, status);
+  });
+
+  app.get('/api/csv/list', async (c) => {
+    const result = await csvUploadService.list();
+    if (result.ok) {
+      return c.json(result.value);
+    }
+    return c.json({ error: result.error.message }, 500);
+  });
+
+  app.delete('/api/csv/:id', async (c) => {
+    const id = c.req.param('id');
+    const result = await csvUploadService.delete(id);
+    
+    if (result.ok) {
+      if (result.value) {
+        return c.json({ deleted: true });
+      } else {
+        return c.json({ error: 'File not found' }, 404);
+      }
+    }
+    
+    return c.json({ error: result.error.message }, 500);
+  });
+
+  // HTMLダッシュボード
+  app.get('/', async (c) => {
+    const result = await dataService.getIntegratedData();
+    
+    if (!result.ok) {
+      const errorComponent = React.createElement('html', { lang: 'ja' }, [
+        React.createElement('head', { key: 'head' }, [
+          React.createElement('meta', { key: 'charset', charSet: 'UTF-8' }),
+          React.createElement('meta', { key: 'viewport', name: 'viewport', content: 'width=device-width, initial-scale=1.0' }),
+          React.createElement('title', { key: 'title' }, 'GitHub Copilot Manager - エラー'),
+          React.createElement('style', { key: 'style' }, `
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; margin: 40px; background: #f5f5f5; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .error { color: #dc3545; padding: 20px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; }
+          `)
+        ]),
+        React.createElement('body', { key: 'body' }, 
+          React.createElement('div', { className: 'container' }, [
+            React.createElement('h1', { key: 'h1' }, 'GitHub Copilot Manager'),
+            React.createElement('div', { key: 'error', className: 'error' }, [
+              React.createElement('h2', { key: 'h2' }, 'データの読み込みに失敗しました'),
+              React.createElement('p', { key: 'p' }, result.error.message)
+            ])
+          ])
+        )
+      ]);
+      
+      return c.html('<!DOCTYPE html>' + renderToString(errorComponent));
+    }
+
+    const data = result.value;
+    
+    // Reactコンポーネントでダッシュボード全体をサーバーサイドレンダリング
+    const dashboardComponent = React.createElement(Dashboard, { data });
+    const html = renderToString(dashboardComponent);
+    
+    return c.html('<!DOCTYPE html>' + html);
+    /*
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>GitHub Copilot Manager</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+          .container { max-width: 1200px; margin: 0 auto; }
+          .card { background: white; padding: 24px; margin: 16px 0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+          .stat { text-align: center; padding: 16px; }
+          .stat-value { font-size: 2em; font-weight: bold; color: #0066cc; }
+          .stat-label { color: #666; margin-top: 8px; }
+          h1 { color: #333; margin-bottom: 32px; }
+          h2 { color: #444; border-bottom: 2px solid #0066cc; padding-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+          th { background: #f8f9fa; font-weight: 600; }
+          .status-ok { color: #28a745; }
+          .status-warn { color: #ffc107; }
+          .disclaimer { font-size: 0.9em; color: #666; margin-top: 16px; }
+          .chart-loading { text-align: center; padding: 40px; color: #666; }
+          .chart-container h3 { margin: 0 0 16px 0; color: #444; }
+        </style>
+        <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+        <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+      </head>
+      <body>
+        <div class="container">
+          <h1>GitHub Copilot Manager</h1>
+          
+          <div class="grid">
+            <div class="card">
+              <h2>座席情報</h2>
+              <div class="stat">
+                <div class="stat-value">${data.seats.length}</div>
+                <div class="stat-label">総座席数</div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <h2>課金見積もり</h2>
+              <div class="stat">
+                <div class="stat-value">$${data.billing.estimatedCost.toFixed(2)}</div>
+                <div class="stat-label">月額見積もり (${data.billing.activeUserCount}アクティブユーザー)</div>
+              </div>
+              ${data.billing.disclaimers.map(d => `<p class="disclaimer">${d}</p>`).join('')}
+            </div>
+            
+            ${data.csvData ? `
+            <div class="card">
+              <h2>利用状況</h2>
+              <div class="grid">
+                <div class="stat">
+                  <div class="stat-value">${data.csvData.records.length}</div>
+                  <div class="stat-label">利用記録</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">${data.csvData.totalUsers || 0}</div>
+                  <div class="stat-label">利用ユーザー数</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value ${data.csvData.exceedingUsers > 0 ? 'status-warn' : 'status-ok'}">${data.csvData.exceedingUsers || 0}</div>
+                  <div class="stat-label">制限超過ユーザー</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <h2>利用量チャート</h2>
+              <div id="usage-chart" style="width: 100%; height: 400px;">
+                <div class="chart-loading">チャートを読み込み中...</div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <h2>座席状況チャート</h2>
+              <div id="seats-chart" style="width: 100%; height: 300px;">
+                <div class="chart-loading">チャートを読み込み中...</div>
+              </div>
+            </div>
+            ` : `
+            <div class="card">
+              <h2>利用状況</h2>
+              <p>CSV データがアップロードされていません</p>
+            </div>
+            `}
+          </div>
+
+          <div class="card">
+            <h2>ユーザー一覧</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>ユーザー名</th>
+                  <th>ユーザーID</th>
+                  <th>割り当て日</th>
+                  <th>最終活動</th>
+                  <th>解約予定</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.seats.map(seat => `
+                  <tr>
+                    <td>${seat.login}</td>
+                    <td>${seat.userId}</td>
+                    <td>${new Date(seat.assignedAt).toLocaleDateString('ja-JP')}</td>
+                    <td>${seat.lastActivityAt ? new Date(seat.lastActivityAt).toLocaleDateString('ja-JP') : '-'}</td>
+                    <td>${seat.pendingCancellationDate ? new Date(seat.pendingCancellationDate).toLocaleDateString('ja-JP') : '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h2>データソース状況</h2>
+            <p>API最終取得: ${new Date(data.dataSourceStatus.apiLastFetched).toLocaleString('ja-JP')}</p>
+            ${data.dataSourceStatus.csvLastUpdated ? 
+              `<p>CSV最終更新: ${new Date(data.dataSourceStatus.csvLastUpdated).toLocaleString('ja-JP')}</p>` : 
+              '<p>CSVデータ: なし</p>'
+            }
+          </div>
+        </div>
+        
+        ${data.csvData ? `
+        <script>
+          console.log('Chart script starting...');
+          const chartData = ${JSON.stringify(data)};
+          
+          function initCharts() {
+            console.log('Libraries check:', {
+              React: typeof React,
+              ReactDOM: typeof ReactDOM,
+              Recharts: typeof Recharts
+            });
+            
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof Recharts === 'undefined') {
+              console.error('Required libraries not loaded');
+              document.getElementById('usage-chart').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">チャートライブラリの読み込みに失敗しました</div>';
+              document.getElementById('seats-chart').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">チャートライブラリの読み込みに失敗しました</div>';
+              return;
+            }
+            
+            // ユーザー別利用量チャート
+            if (chartData.csvData) {
+            const userUsage = chartData.csvData.records.reduce((acc, record) => {
+              if (!acc[record.user]) {
+                acc[record.user] = {
+                  user: record.user,
+                  totalUsage: 0,
+                  exceedsQuota: false,
+                };
+              }
+              acc[record.user].totalUsage += record.useQuota;
+              if (record.exceedsMonthlyQuota) {
+                acc[record.user].exceedsQuota = true;
+              }
+              return acc;
+            }, {});
+
+            const usageData = Object.values(userUsage)
+              .sort((a, b) => b.totalUsage - a.totalUsage)
+              .slice(0, 10);
+
+            // 利用量チャート作成
+            const usageChart = React.createElement(Recharts.ResponsiveContainer, 
+              { width: '100%', height: 400 },
+              React.createElement(Recharts.BarChart, { data: usageData },
+                React.createElement(Recharts.CartesianGrid, { strokeDasharray: '3 3' }),
+                React.createElement(Recharts.XAxis, { 
+                  dataKey: 'user', 
+                  angle: -45, 
+                  textAnchor: 'end', 
+                  height: 80,
+                  fontSize: 12 
+                }),
+                React.createElement(Recharts.YAxis),
+                React.createElement(Recharts.Tooltip),
+                React.createElement(Recharts.Bar, { 
+                  dataKey: 'totalUsage', 
+                  fill: '#0066cc' 
+                })
+              )
+            );
+
+            // 座席状況チャート
+            const activeCount = chartData.billing.activeUserCount;
+            const pendingCancellation = chartData.seats.filter(s => s.pendingCancellationDate).length;
+            const seatsData = [
+              { name: 'アクティブ', value: activeCount, color: '#28a745' },
+              { name: '解約予定', value: pendingCancellation, color: '#ffc107' },
+            ];
+
+            const seatsChart = React.createElement(Recharts.ResponsiveContainer,
+              { width: '100%', height: 300 },
+              React.createElement(Recharts.PieChart,
+                {},
+                React.createElement(Recharts.Pie, {
+                  data: seatsData,
+                  cx: '50%',
+                  cy: '50%',
+                  outerRadius: 100,
+                  fill: '#8884d8',
+                  dataKey: 'value',
+                  label: ({ name, value }) => \`\${name}: \${value}\`
+                }),
+                React.createElement(Recharts.Tooltip)
+              )
+            );
+
+            // チャートを実際に描画
+            try {
+              console.log('Rendering charts...');
+              if (document.getElementById('usage-chart')) {
+                ReactDOM.render(usageChart, document.getElementById('usage-chart'));
+                console.log('Usage chart rendered');
+              }
+              if (document.getElementById('seats-chart')) {
+                ReactDOM.render(seatsChart, document.getElementById('seats-chart'));
+                console.log('Seats chart rendered');
+              }
+            } catch (error) {
+              console.error('Chart rendering error:', error);
+              document.getElementById('usage-chart').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">チャート描画エラー</div>';
+              document.getElementById('seats-chart').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">チャート描画エラー</div>';
+            }
+          }
+          }
+          
+          // ライブラリが読み込まれるまで待機
+          let retryCount = 0;
+          const maxRetries = 10;
+          
+          function tryInitCharts() {
+            if (typeof React !== 'undefined' && typeof ReactDOM !== 'undefined' && typeof Recharts !== 'undefined') {
+              initCharts();
+            } else if (retryCount < maxRetries) {
+              retryCount++;
+              console.log('Waiting for libraries...', retryCount);
+              setTimeout(tryInitCharts, 200);
+            } else {
+              console.error('Libraries failed to load after', maxRetries, 'attempts');
+              document.getElementById('usage-chart').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">ライブラリ読み込み失敗</div>';
+              document.getElementById('seats-chart').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">ライブラリ読み込み失敗</div>';
+            }
+          }
+          
+          // ページ読み込み後に開始
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', tryInitCharts);
+          } else {
+            tryInitCharts();
+          }
+        </script>
+        ` : ''}
+      </body>
+      </html>
+    `);
+  });
+
+  return app;
+};
+
+// メイン実行
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const app = createServer();
+  const port = Number(process.env.PORT) || 3000;
+  
+  console.log(`Starting GitHub Copilot Manager server on http://localhost:${port}`);
+  
+  serve({
+    fetch: app.fetch,
+    port,
+  });
+}

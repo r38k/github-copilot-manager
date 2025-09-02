@@ -1,46 +1,50 @@
-# リポジトリ ガイドライン
+# Repository Guidelines
 
-## プロジェクト構成とモジュール構成
+This guide summarizes how to work effectively in this repository.
 
-- `src/`: TypeScript のソース。エントリは `src/index.ts` から開始。
-- `docs/`: API 仕様やアーキテクチャのメモ（例: Copilot API など）。
-- `data/`: ローカル検証用のデモ入力（`demo-usage.csv`, `demo-*.json`）。
-- 予定モジュール（README 参照）: `src/api/`, `src/models/`, `src/services/`, `src/ui/`。
+> Note: Documentation and comments should be written in Japanese where reasonable. UI texts and commit messages may be bilingual as needed, but prefer Japanese for team communication.
 
-## ビルド・テスト・開発コマンド
+## Project Structure & Module Organization
+- Source: `src/` (entry: `src/index.ts`). Planned: `src/api/`, `src/models/`, `src/services/`, `src/ui/`.
+- Docs: `docs/` (API specs, architecture notes).
+- Demo data: `data/` (e.g., `demo-usage.csv`, `demo-*.json`).
+- Tests: co-located near sources or under `tests/` mirroring `src/` with `*.spec.ts`.
 
-- 依存関係のインストール: `pnpm install`
-- 開発実行（TS を直接実行）: `npx tsx src/index.ts`
-- TypeScript のビルド: `npx tsgo`
-- ビルド成果物の実行: `node dist/index.js`
-- 依存追加: `pnpm add <pkg>`、開発依存: `pnpm add -D <pkg>`
-- テスト: `pnpm test`（プレースホルダ）。テストランナー追加までは `data/` のデモデータと手動実行で確認。
+## Build, Test, and Development Commands
+- Install: `pnpm install`
+- Run (dev, TS directly): `npx tsx src/index.ts`
+- Web (CSR) dev: `pnpm dev:web` (Vite app at `/app` when built)
+- Type check: `npx tsc -p tsconfig.json`
+- Build: `npx tsgo`
+- Run build output: `node dist/index.js`
+- Add deps: `pnpm add <pkg>`; dev deps: `pnpm add -D <pkg>`
+- Tests: `pnpm test` (placeholder until a runner is added)
 
-## コーディングスタイルと命名規則
+## Coding Style & Naming Conventions
+- Language: TypeScript (strict), `module: nodenext`, `target: esnext`.
+- Avoid `any`. Prefer `const`. Favor pure functions; avoid `class`.
+- Side effects return `Result<T, E>`-like objects.
+- Indent 2 spaces; typical line width ~100–120.
+- Naming: files `kebab-case.ts`; vars/functions `camelCase`; types `PascalCase`; env `UPPER_SNAKE_CASE`.
+- No linter configured—keep formatting consistent and run the type checker.
 
-- 言語: TypeScript（strict）。`module: nodenext`、`target: esnext`。
-- `any` は禁止。`const` を優先。純粋関数を使用。副作用がある場合は `Result<T, E>` を返す。
-- `class` は避け、関数 + プレーンオブジェクトを使用。
-- インデント: 2 スペース。行幅: およそ 100–120。
-- 命名: ファイルは `kebab-case.ts`、関数/変数は `camelCase`、型は `PascalCase`、環境変数は `UPPER_SNAKE_CASE`。
-- 型チェック: `npx tsc -p tsconfig.json`。リンターは未設定のため、整形を一貫させる。
-- 本リポジトリ固有の厳格なルールは `CLAUDE.md` を参照。
+## Testing Guidelines
+- Framework: not set (recommend `vitest` or `jest` with `tsx`).
+- Naming: `*.spec.ts` near source or under `tests/` mirroring `src/`.
+- Use `data/` fixtures to validate parsing, metrics, and user flows.
+- Stub network calls; aim to cover parsing, service logic, and API adapters.
 
-## テストガイドライン
+## Commit & Pull Request Guidelines
+- Commits: Conventional Commits (e.g., `feat(api): add seats fetch`).
+- PRs: clear description, motivation, before/after notes, linked issues, and key CLI output/screenshots. Update `README.md`/`docs/` when behavior or APIs change. Keep changes focused and small.
 
-- フレームワーク: 未設定。推奨: `ts-node/tsx` と併用する `vitest` または `jest`。
-- テスト命名（追加時）: ソース近傍または `src/` を反映した `tests/` 配下に `*.spec.ts`。
-- `data/` のフィクスチャを用いて、パース、メトリクス、ユーザー管理フローを検証。
-- パース、サービスロジック、API アダプタのカバレッジを目標とする。
+## Security & Configuration
+- Copy `.env.example` to `.env`; set `GITHUB_TOKEN` and `GITHUB_ORG`.
+- Never commit secrets. Limit token scopes to those documented.
+- Prefer local demo data during development; stub external calls in tests.
+ - Frontend builds are static and served by the same server under `/app`. Secrets remain server-side; avoid exposing keys in client code.
 
-## コミットおよびプルリクエストのガイドライン
-
-- コミット: Conventional Commits（`feat:`、`fix:`、`docs:`、`chore:`、`refactor:`）に従う。メッセージは命令形・スコープ付き（例: `feat(api): add seats fetch`）。
-- PR に含める内容: 明確な説明、動機、変更前後のノート、関連 Issue、主要フローの CLI 出力/スクショ。`data/` を用いたテストノートやデモ手順も追加。
-- 変更は小さく焦点を絞る。挙動や API が変わる場合は `README.md`/`docs/` を更新。
-
-## セキュリティと設定
-
-- `.env.example` から `.env` を作成し、`GITHUB_TOKEN` と `GITHUB_ORG` を設定。
-- シークレットはコミットしない。トークンのスコープは README 記載の範囲に限定。
-- 開発ではローカルのデモデータを優先。テストではネットワーク呼び出しをスタブ化。
+## Agent-Specific Notes
+- Make minimal, targeted patches; avoid unrelated changes.
+- Keep to repo style; update docs alongside behavioral changes.
+- Use `pnpm` consistently and include reproducible commands in PR notes.

@@ -6,6 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "dev:web": "pnpm -C apps/web dev",
+    "build:web": "pnpm -C apps/web build",
+    "preview:web": "pnpm -C apps/web preview",
+    "web:data": "tsx scripts/generate-web-data.ts",
+    "dev:web:withdata": "pnpm web:data && pnpm -C apps/web dev",
+    "dev:server": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
@@ -16,10 +22,22 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/jsdom": "^21.1.7",
     "@types/node": "^24.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
     "@typescript/native-preview": "7.0.0-dev.20250827.1",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "hono": "^4.9.5",
+    "jsdom": "^26.1.0",
+    "octokit": "^5.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.1.2"
   }
 }
