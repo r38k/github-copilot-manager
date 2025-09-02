@@ -85,6 +85,13 @@ pnpm build
 node dist/index.js
 ```
 
+### 開発メモ（自分用）
+- フロント（CSR）: `pnpm dev:web`（静的 `apps/web/public/data.json` を読む）
+- 静的データ生成: `pnpm web:data`（`data/` にCSVを置けばOK。最新を自動で拾う）
+- 単一サーバー配信: `pnpm build:web` → `pnpm dev` → `http://localhost:3000/app`
+- データ取得の優先順位: 1) `/api/data`（サーバー起動時）→ 2) `/data.json`（静的）
+- APIを使う: `.env` に `GITHUB_TOKEN` と `GITHUB_ORG` を入れる（入れなければデモ/CSV優先）
+
 ### データのインポート
 
 1. **CSVデータのインポート**

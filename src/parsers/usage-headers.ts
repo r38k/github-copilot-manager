@@ -40,17 +40,19 @@ export const HEADER_ALIASES: Readonly<Record<string, UsageHeader>> = {
   used: "useQuota",
   used_quota: "useQuota",
   credits_used: "useQuota",
+  "requests used": "useQuota",
 
   // monthly limit (limitMonthlyQuota)
   limitmonthlyquota: "limitMonthlyQuota",
   monthly_quota: "limitMonthlyQuota",
   monthly_limit: "limitMonthlyQuota",
   quota_limit: "limitMonthlyQuota",
+  "total monthly quota": "limitMonthlyQuota",
 
   // exceeded flag (exceedsMonthlyQuota)
   exceedsmonthlyquota: "exceedsMonthlyQuota",
   exceeded: "exceedsMonthlyQuota",
   exceeded_monthly_quota: "exceedsMonthlyQuota",
   is_exceeded: "exceedsMonthlyQuota",
+  "exceeds monthly quota": "exceedsMonthlyQuota",
 } as const;
-

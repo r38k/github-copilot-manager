@@ -1,0 +1,20 @@
+{
+  "uploads": {
+    "048b9757-f35f-496d-adc5-fcc7801f089e": {
+      "id": "048b9757-f35f-496d-adc5-fcc7801f089e",
+      "filename": "test-1756823399988.csv",
+      "size": 56,
+      "contentHash": "58239ba4c26a71cebe3e932a8f2a2d4a2da72f9362b858408e8f25bbee6e564c",
+      "uploadedAt": "2025-09-02T14:29:59.999Z",
+      "uploadedBy": "test-user"
+    },
+    "12816fe1-cc2c-4a85-92dc-fbbf3abf4481": {
+      "id": "12816fe1-cc2c-4a85-92dc-fbbf3abf4481",
+      "filename": "test-1756824129074.csv",
+      "size": 56,
+      "contentHash": "0ce66dfabb99d22558dc13c6638ab5fba86d604ce78bf1ddfd032a9c650cc051",
+      "uploadedAt": "2025-09-02T14:42:09.084Z",
+      "uploadedBy": "test-user"
+    }
+  }
+}

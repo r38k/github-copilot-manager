@@ -19,3 +19,15 @@ export type BillingEstimate = {
 
 export type DateRange = { start: Date; end: Date };
 
+export type UsageRecord = {
+  date: string;
+  login: string;
+  product: string;
+  suggestionsCount: number;
+  acceptancesCount: number;
+  linesSuggested: number;
+  linesAccepted: number;
+  activeUsers: number;
+  acceptanceRate: number;
+};
+
