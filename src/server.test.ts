@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Hono } from 'hono';
-import type { Result } from '../utils/result.js';
+import type { Result } from './utils/result.js';
 
 // テスト対象の型定義（実装前）
 export type IntegratedData = {
@@ -50,7 +50,8 @@ describe('Web Server API', () => {
     };
 
     const { createServer } = await import('./index.js');
-    app = createServer(mockDataService);
+    // テスト内の簡易型と本実装の型差異を無視
+    app = createServer(mockDataService as any);
   });
 
   describe('GET /api/health', () => {

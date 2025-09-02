@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { Result } from '../utils/result';
-import type { UserSeat } from '../models/types';
-import type { CsvUploadMeta } from './csv-upload.test';
+import type { Result } from '../utils/result.js';
+import type { UserSeat } from '../models/types.js';
+import type { CsvUploadMeta } from './csv-upload.test.js';
 
 // テスト対象の型定義（実装前）
 export type DataIntegrationError = 

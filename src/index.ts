@@ -23,15 +23,18 @@ const createDataService = (): DataService => {
     async getLatest() {
       // まずアップロードされたCSVをチェック
       const uploadedResult = await csvUploadService.list();
-      if (uploadedResult.ok && uploadedResult.value.length > 0) {
-        const latest = uploadedResult.value[0];
-        return { ok: true, value: {
-          id: latest.id,
-          filename: latest.filename,
-          size: latest.size,
-          contentHash: latest.contentHash,
-          uploadedAt: latest.uploadedAt,
-        }} as const;
+      if (uploadedResult.ok) {
+        const arr = uploadedResult.value;
+        if (arr.length > 0) {
+          const latest = arr[0]!;
+          return { ok: true, value: {
+            id: latest.id,
+            filename: latest.filename,
+            size: latest.size,
+            contentHash: latest.contentHash,
+            uploadedAt: latest.uploadedAt,
+          }} as const;
+        }
       }
       
       // アップロードされたCSVがない場合はdataディレクトリから取得
@@ -180,7 +183,8 @@ export const createServer = (dataService: DataService = createDataService()) => 
 
   // SPA (CSR) を /app で提供（apps/web/dist を想定）
   app.get('/app', (c) => c.redirect('/app/'));
-  app.get('/app/*', serveStatic({ root: 'apps/web/dist' }));
+  // 型の差異を回避するため明示キャスト
+  app.get('/app/*', serveStatic({ root: 'apps/web/dist' } as any));
 
   return app;
 };

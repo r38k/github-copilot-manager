@@ -143,14 +143,17 @@ export const createFileSystemUploadService = (uploadDir: string): CsvUploadServi
 
     // 新しいアップロード
     const id = randomUUID();
-    const uploadMeta: CsvUploadMeta = {
+    const uploadMetaBase = {
       id,
       filename,
       size: Buffer.byteLength(content, 'utf8'),
       contentHash,
       uploadedAt: new Date(),
-      uploadedBy,
-    };
+    } satisfies Omit<CsvUploadMeta, 'uploadedBy'>;
+
+    const uploadMeta: CsvUploadMeta = uploadedBy !== undefined
+      ? { ...uploadMetaBase, uploadedBy }
+      : { ...uploadMetaBase };
 
     try {
       // ファイル保存

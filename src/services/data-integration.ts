@@ -149,7 +149,9 @@ export const createDataIntegrationService = (deps: {
       billing: billingResult.value,
       dataSourceStatus: {
         seatsLastUpdated: new Date().toISOString(),
-        csvLastUpdated: csvData?.meta.uploadedAt.toISOString(),
+        ...(csvData?.meta.uploadedAt
+          ? { csvLastUpdated: csvData.meta.uploadedAt.toISOString() }
+          : {}),
       },
     };
 
@@ -170,7 +172,12 @@ export const createDefaultDataIntegrationService = (csvService: CsvService): Dat
   const seatsService: SeatsService = {
     async loadSeats() {
       const { loadDemoSeats } = await import('../api/seats.js');
-      return loadDemoSeats();
+      const res = loadDemoSeats();
+      if (res.ok) {
+        // ReadonlyArray を可変配列に変換して型を満たす
+        return ok([...res.value]);
+      }
+      return res as any;
     }
   };
 

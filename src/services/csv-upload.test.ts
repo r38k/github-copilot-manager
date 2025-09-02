@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import type { Result } from '../utils/result';
+import type { Result } from '../utils/result.js';
 
 // テスト対象の型定義（実装前）
 export type CsvUploadMeta = {
