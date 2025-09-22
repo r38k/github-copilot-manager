@@ -10,10 +10,10 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: ^1.19.0
-        version: 1.19.0(hono@4.9.5)
+        version: 1.19.0(hono@4.9.8)
       hono:
-        specifier: ^4.9.5
-        version: 4.9.5
+        specifier: ^4.9.8
+        version: 4.9.8
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
@@ -761,8 +761,8 @@ packages:
   get-tsconfig@4.10.1:
     resolution: {integrity: sha512-auHyJ4AgMz7vgS8Hp3N6HXSmlMdUyhSUrfBF16w153rxtLIEOE+HGqaBppczZvnHLqQJfiHotCYpNhl0lUROFQ==}
 
-  hono@4.9.5:
-    resolution: {integrity: sha512-aLAVl5/67ifNnoFVxnhR89dpmSLsgwBprw/PT671ASwUpJqmd7Ne8KPTQo37DbRZfgpHaHeZ4bPVUvbOkeedMw==}
+  hono@4.9.8:
+    resolution: {integrity: sha512-JW8Bb4RFWD9iOKxg5PbUarBYGM99IcxFl2FPBo2gSJO11jjUDqlP1Bmfyqt8Z/dGhIQ63PMA9LdcLefXyIasyg==}
     engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@4.0.0:
@@ -1238,9 +1238,9 @@ snapshots:
   '@esbuild/win32-x64@0.25.9':
     optional: true
 
-  '@hono/node-server@1.19.0(hono@4.9.5)':
+  '@hono/node-server@1.19.0(hono@4.9.8)':
     dependencies:
-      hono: 4.9.5
+      hono: 4.9.8
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
@@ -1734,7 +1734,7 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  hono@4.9.5: {}
+  hono@4.9.8: {}
 
   html-encoding-sniffer@4.0.0:
     dependencies:
