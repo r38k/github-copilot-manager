@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",
-    "hono": "^4.9.5",
+    "hono": "^4.9.11",
     "jsdom": "^26.1.0",
     "octokit": "^5.0.3",
     "react": "^18.3.1",
